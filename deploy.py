@@ -1,0 +1,293 @@
+#!/usr/bin/env python3
+"""
+PUSH.IT
+faster than flash
+"""
+
+import os
+import sys
+import subprocess
+import glob
+from pathlib import Path
+from collections import defaultdict
+
+#---ansi colors---#
+class Colors:
+    RED = '\033[91m'
+    GREEN = '\033[92m'
+    YELLOW = '\033[93m'
+    BLUE = '\033[94m'
+    MAGENTA = '\033[95m'
+    CYAN = '\033[96m'
+    WHITE = '\033[97m'
+    BOLD = '\033[1m'
+    END = '\033[0m'
+
+#---language analyse func
+#--- ---#
+def analyze_project():
+    """ANALYSE LANGUAGE OF THE PROJECT"""
+    #---extensions mapping---#
+    extensions = {
+        '.py': 'Python',
+        '.sh': 'Shell',
+        '.bash': 'Shell', 
+        '.zsh': 'Shell',
+        '.js': 'JavaScript',
+        '.ts': 'TypeScript',
+        '.go': 'Go',
+        '.java': 'Java',
+        '.cpp': 'C++',
+        '.c': 'C',
+        '.rs': 'Rust',
+        '.php': 'PHP',
+        '.rb': 'Ruby'
+    }
+    
+    language_counts = defaultdict(int)
+    total_files = 0
+    
+    #---files recursive walk---#
+    for root, dirs, files in os.walk('.'):
+        #---ignore hidden folders and node_modules---#
+        dirs[:] = [d for d in dirs if not d.startswith('.') and d != 'node_modules']
+        
+        for file in files:
+            #---skip hidden files---#
+            if file.startswith('.'):
+                continue
+                
+            ext = Path(file).suffix.lower()
+            if ext in extensions:
+                language_counts[extensions[ext]] += 1
+                total_files += 1
+    
+    return language_counts, total_files
+
+def display_analysis(language_counts, total_files):
+    """Show language scan"""
+    if total_files == 0:
+        print(f"{Colors.YELLOW}no code files detected fr{Colors.END}")
+        return
+    
+    print(f"\n{Colors.BOLD}lıı project scanning:{Colors.END}")
+    
+    #---colors per language mapping---#
+    lang_colors = {
+        'Python': Colors.GREEN,
+        'Shell': Colors.CYAN,
+        'JavaScript': Colors.YELLOW,
+        'TypeScript': Colors.BLUE,
+        'Go': Colors.CYAN,
+        'Java': Colors.RED,
+        'C++': Colors.MAGENTA,
+        'C': Colors.BLUE,
+        'Rust': Colors.RED,
+        'PHP': Colors.MAGENTA,
+        'Ruby': Colors.RED
+    }
+    
+    #---display sorted by count desc---#
+    for lang, count in sorted(language_counts.items(), key=lambda x: x[1], reverse=True):
+        percentage = (count / total_files) * 100
+        color = lang_colors.get(lang, Colors.WHITE)
+        print(f"{color}{percentage:.1f}% {lang}{Colors.END} ({count} files)")
+
+def is_git_initialized():
+    """verify if git is initialized"""
+    return os.path.exists('.git')
+
+def run_command(command, capture_output=False):
+    """run shell command"""
+    try:
+        if capture_output:
+            result = subprocess.run(command, shell=True, capture_output=True, text=True)
+            return result.returncode == 0, result.stdout.strip()
+        else:
+            result = subprocess.run(command, shell=True)
+            return result.returncode == 0, ""
+    except Exception as e:
+        print(f"{Colors.RED}error: {e}{Colors.END}")
+        return False, ""
+
+def init_git():
+    """init git and config remote"""
+    print(f"\n{Colors.BOLD}⏣ initializing Git{Colors.END}")
+    
+    #---git init command---#
+    success, _ = run_command("git init")
+    if not success:
+        print(f"{Colors.RED}error while git init ngl{Colors.END}")
+        return False
+    
+    #---ask for the repo url---#
+    repo_url = input(f"{Colors.CYAN}github repo url: {Colors.END}").strip()
+    if not repo_url:
+        print(f"{Colors.RED}url required bestie{Colors.END}")
+        return False
+    
+    #---add the remote origin---#
+    success, _ = run_command(f"git remote add origin {repo_url}")
+    if not success:
+        print(f"{Colors.RED}error adding remote rip{Colors.END}")
+        return False
+    
+    print(f"{Colors.GREEN}√ Git initialized successfully{Colors.END}")
+    return True
+
+def deploy():
+    """start deploying"""
+    print(f"\n{Colors.BOLD}ᯓ➤ deploying{Colors.END}")
+    
+    #---check git status for changes---#
+    success, status = run_command("git status --porcelain", capture_output=True)
+    if not success:
+        print(f"{Colors.RED}error while checking git status{Colors.END}")
+        return
+    
+    if not status.strip():
+        print(f"{Colors.YELLOW}no changes to commit bestie{Colors.END}")
+        return
+    
+    #---ask for commit message---#
+    commit_msg = input(f"{Colors.CYAN}commit message: {Colors.END}").strip()
+    if not commit_msg:
+        commit_msg = "Update"
+    
+    #---git add all files---#
+    print("ᯓ➤ adding files...")
+    success, _ = run_command("git add .")
+    if not success:
+        print(f"{Colors.RED}error during git add{Colors.END}")
+        return
+    
+    #---git commit with message---#
+    print("≫ committing...")
+    success, _ = run_command(f'git commit -m "{commit_msg}"')
+    if not success:
+        print(f"{Colors.RED}error during commit{Colors.END}")
+        return
+    
+    #---check if first push needed---#
+    success, branches = run_command("git branch -r", capture_output=True)
+    is_first_push = not success or not branches.strip()
+    
+    #---git push to github---#
+    print("✦ pushing to GitHub...")
+    if is_first_push:
+        success, _ = run_command("git push -u origin main")
+    else:
+        success, _ = run_command("git push")
+    
+    if success:
+        print(f"{Colors.GREEN} [√] deployment successful no cap!{Colors.END}")
+    else:
+        print(f"{Colors.RED} [✗] push failed rip{Colors.END}")
+
+def display_menu():
+    """display menu and handle navigation"""
+    git_initialized = is_git_initialized()
+    
+    #---menu options with icons and colors---#
+    options = [
+        ("Deploy", "ᯓ➤", Colors.RED if not git_initialized else Colors.GREEN),
+        ("Init Git", "⏣", Colors.CYAN),
+        ("Exit", "✖", Colors.WHITE)
+    ]
+    
+    selected = 0
+    
+    while True:
+        #---clear screen windows/linux compatible---#
+        os.system('cls' if os.name == 'nt' else 'clear')
+        
+        #---re-analyze and display project---#
+        language_counts, total_files = analyze_project()
+        display_analysis(language_counts, total_files)
+        
+        print(f"\n{Colors.BOLD}ᯓ➤ deployment menu:{Colors.END}")
+        
+        if not git_initialized:
+            print(f"{Colors.YELLOW}⚠️  git not initialized{Colors.END}")
+        
+        print()
+        
+        #---display menu options---#
+        for i, (name, icon, color) in enumerate(options):
+            if i == selected:
+                print(f"{Colors.BOLD}> {icon} {color}{name}{Colors.END}")
+            else:
+                print(f"  {icon} {color}{name}{Colors.END}")
+        
+        print(f"\n{Colors.CYAN}use ↑↓ to navigate, enter to select{Colors.END}")
+        
+        #---read keyboard input---#
+        try:
+            if os.name == 'nt':  #---windosw---#
+                import msvcrt
+                key = msvcrt.getch()
+                if key == b'\xe0':  #---arrow key---#
+                    key = msvcrt.getch()
+                    if key == b'H':  #---up arrow---#
+                        selected = (selected - 1) % len(options)
+                    elif key == b'P':  #---down arrow---#
+                        selected = (selected + 1) % len(options)
+                elif key == b'\r':  #---enter key---#
+                    break
+            else:  #---linux / mac---#
+                import termios, tty
+                fd = sys.stdin.fileno()
+                old_settings = termios.tcgetattr(fd)
+                try:
+                    tty.setraw(sys.stdin.fileno())
+                    key = sys.stdin.read(1)
+                    if key == '\x1b':  #---esc sequence---#
+                        key += sys.stdin.read(2)
+                        if key == '\x1b[A':  #---up arrow---#
+                            selected = (selected - 1) % len(options)
+                        elif key == '\x1b[B':  #---down arrow---#
+                            selected = (selected + 1) % len(options)
+                    elif key == '\r' or key == '\n':  #---enter key---#
+                        break
+                finally:
+                    termios.tcsetattr(fd, termios.TCSADRAIN, old_settings)
+        except (ImportError, KeyboardInterrupt):
+            #---fallback for systems without key support---#
+            print("\nnavigation by number:")
+            for i, (name, icon, color) in enumerate(options):
+                print(f"{i+1}. {icon} {color}{name}{Colors.END}")
+            try:
+                choice = int(input("choice: ")) - 1
+                if 0 <= choice < len(options):
+                    selected = choice
+                    break
+            except (ValueError, KeyboardInterrupt):
+                selected = len(options) - 1  #---exit option---#
+                break
+    
+    return selected
+
+def main():
+    """main function"""
+    try:
+        selected = display_menu()
+        
+        if selected == 0:  #---deploy option---#
+            if not is_git_initialized():
+                print(f"\n{Colors.YELLOW}git not initialized... auto-initializing...{Colors.END}")
+                if not init_git():
+                    return
+            deploy()
+        elif selected == 1:  #---init git option---#
+            init_git()
+        elif selected == 2:  #---exit option---#
+            print(f"{Colors.CYAN}see ya later!{Colors.END}")
+            return
+        
+        input(f"\n{Colors.CYAN}press enter to continue...{Colors.END}")
+        
+    except KeyboardInterrupt:
+        print(f"\n{Colors.CYAN}see ya later!{Colors.END}")
+
+if __name__ == "__main__":
+    main()

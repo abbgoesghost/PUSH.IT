@@ -1,0 +1,13 @@
+#!/bin/bash
+#---bash wrapper for deployment tool---#
+#---usage: ./deploy---#
+
+#---look for python3 then python---#
+if command -v python3 &> /dev/null; then
+    python3 "$(dirname "$0")/deploy.py" "$@"
+elif command -v python &> /dev/null; then
+    python "$(dirname "$0")/deploy.py" "$@"
+else
+    echo "✗ python not installed fr"
+    exit 1
+fi
