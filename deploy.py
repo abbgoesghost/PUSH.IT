@@ -172,10 +172,15 @@ def deploy():
     success, branches = run_command("git branch -r", capture_output=True)
     is_first_push = not success or not branches.strip()
     
+    #---get current branch name---#
+    success, current_branch = run_command("git branch --show-current", capture_output=True)
+    if not success or not current_branch.strip():
+        current_branch = "main"  #---fallback to main---#
+    
     #---git push to github---#
     print("✦ pushing to GitHub...")
     if is_first_push:
-        success, _ = run_command("git push -u origin main")
+        success, _ = run_command(f"git push -u origin {current_branch}")
     else:
         success, _ = run_command("git push")
     
