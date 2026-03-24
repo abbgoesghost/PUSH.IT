@@ -8,6 +8,7 @@ import os
 import sys
 import subprocess
 import glob
+import time
 from pathlib import Path
 from collections import defaultdict
 
@@ -87,11 +88,54 @@ def display_analysis(language_counts, total_files):
         'Ruby': Colors.RED
     }
     
-    #---display sorted by count desc---#
+    #---display sorted by count desc with progress bars---#
     for lang, count in sorted(language_counts.items(), key=lambda x: x[1], reverse=True):
         percentage = (count / total_files) * 100
         color = lang_colors.get(lang, Colors.WHITE)
-        print(f"{color}{percentage:.1f}% {lang}{Colors.END} ({count} files)")
+        
+        #---create progress bar---#
+        bar_length = 20
+        filled_length = int(bar_length * percentage / 100)
+        
+        #---bar color based on percentage---#
+        if percentage >= 80:
+            bar_color = Colors.GREEN
+        elif percentage >= 50:
+            bar_color = Colors.YELLOW
+        elif percentage >= 20:
+            bar_color = Colors.CYAN
+        else:
+            bar_color = Colors.RED
+        
+        #---build the barloading---#
+        bar = '█' * filled_length + '░' * (bar_length - filled_length)
+        
+        print(f"{color}{percentage:5.1f}% {lang:<12}{Colors.END} {bar_color}[{bar}]{Colors.END} ({count} files)")
+
+def show_progress_bar(message, duration=2):
+    """show animated progress bar"""
+    print(f"{message}", end="", flush=True)
+    
+    bar_length = 25
+    for i in range(bar_length + 1):
+        percentage = (i / bar_length) * 100
+        filled_length = i
+        
+        #---bar color based on progress---#
+        if percentage >= 80:
+            bar_color = Colors.GREEN
+        elif percentage >= 40:
+            bar_color = Colors.YELLOW
+        else:
+            bar_color = Colors.CYAN
+        
+        #---build animation bar---#
+        bar = '█' * filled_length + '░' * (bar_length - filled_length)
+        
+        print(f"\r{message} {bar_color}[{bar}]{Colors.END} {percentage:3.0f}%", end="", flush=True)
+        time.sleep(duration / bar_length)
+    
+    print()  #---new line after complesion---#
 
 def is_git_initialized():
     """verify if git is initialized"""
@@ -115,6 +159,7 @@ def init_git():
     print(f"\n{Colors.BOLD}⏣ initializing Git{Colors.END}")
     
     #---git init command---#
+    show_progress_bar("⏣ initializing git repo...", 1.5)
     success, _ = run_command("git init")
     if not success:
         print(f"{Colors.RED}error while git init ngl{Colors.END}")
@@ -127,6 +172,7 @@ def init_git():
         return False
     
     #---add the remote origin---#
+    show_progress_bar("⏣ adding remote origin...", 1)
     success, _ = run_command(f"git remote add origin {repo_url}")
     if not success:
         print(f"{Colors.RED}error adding remote rip{Colors.END}")
@@ -134,6 +180,42 @@ def init_git():
     
     print(f"{Colors.GREEN}√ Git initialized successfully{Colors.END}")
     return True
+
+def pull_changes():
+    """pull latest changes from github"""
+    print(f"\n{Colors.BOLD}⟲ pulling changes{Colors.END}")
+    
+    #---check if git is initialized---#
+    if not is_git_initialized():
+        print(f"{Colors.RED}git not initialized bestie{Colors.END}")
+        return
+    
+    #---check if remote exists---#
+    success, remotes = run_command("git remote", capture_output=True)
+    if not success or not remotes.strip():
+        print(f"{Colors.RED}no remote configured{Colors.END}")
+        return
+    
+    #---get current branch---#
+    success, current_branch = run_command("git branch --show-current", capture_output=True)
+    if not success or not current_branch.strip():
+        current_branch = "main"  #---fallback---#
+    
+    #---pull from remote---#
+    show_progress_bar(f"⟲ pulling from origin/{current_branch}...", 2)
+    success, output = run_command(f"git pull origin {current_branch}", capture_output=True)
+    
+    if success:
+        if "Already up to date" in output or "Already up-to-date" in output:
+            print(f"{Colors.YELLOW}already up to date{Colors.END}")
+        else:
+            print(f"{Colors.GREEN} [√] pulled successfully{Colors.END}")
+            if output.strip():
+                print(f"{Colors.CYAN}{output}{Colors.END}")
+    else:
+        print(f"{Colors.RED} [✗] pull failed rip{Colors.END}")
+        if output.strip():
+            print(f"{Colors.RED}{output}{Colors.END}")
 
 def deploy():
     """start deploying"""
@@ -155,14 +237,14 @@ def deploy():
         commit_msg = "Update"
     
     #---git add all files---#
-    print("ᯓ➤ adding files...")
+    show_progress_bar("ᯓ➤ adding files...", 1)
     success, _ = run_command("git add .")
     if not success:
         print(f"{Colors.RED}error during git add{Colors.END}")
         return
     
     #---git commit with message---#
-    print("≫ committing...")
+    show_progress_bar("≫ committing...", 1.5)
     success, _ = run_command(f'git commit -m "{commit_msg}"')
     if not success:
         print(f"{Colors.RED}error during commit{Colors.END}")
@@ -178,7 +260,7 @@ def deploy():
         current_branch = "main"  #---fallback to main---#
     
     #---git push to github---#
-    print("✦ pushing to GitHub...")
+    show_progress_bar("✦ pushing to GitHub...", 2.5)
     if is_first_push:
         success, _ = run_command(f"git push -u origin {current_branch}")
     else:
@@ -196,6 +278,7 @@ def display_menu():
     #---menu options with icons and colors---#
     options = [
         ("Deploy", "ᯓ➤", Colors.RED if not git_initialized else Colors.GREEN),
+        ("Pull", "⟲", Colors.BLUE if git_initialized else Colors.RED),
         ("Init Git", "⏣", Colors.CYAN),
         ("Exit", "✖", Colors.WHITE)
     ]
@@ -279,13 +362,15 @@ def main():
         
         if selected == 0:  #---deploy option---#
             if not is_git_initialized():
-                print(f"\n{Colors.YELLOW}git not initialized... auto-initializing...{Colors.END}")
+                print(f"\n{Colors.YELLOW}git not initialized. auto-initializing...{Colors.END}")
                 if not init_git():
                     return
             deploy()
-        elif selected == 1:  #---init git option---#
+        elif selected == 1:  #---pull option---#
+            pull_changes()
+        elif selected == 2:  #---init git option---#
             init_git()
-        elif selected == 2:  #---exit option---#
+        elif selected == 3:  #---exit option---#
             print(f"{Colors.CYAN}see ya later!{Colors.END}")
             return
         

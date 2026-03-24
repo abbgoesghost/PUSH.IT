@@ -19,11 +19,12 @@ PUSH.IT isa terminal tool that scan your project, shows you what languages youre
 
 ## ✨ what it does
 
-- **project scanning** → shows language percentages in pretty colors
+- **project scanning** → shows language percentages with animated progress bars
 - **interactive menu** → navigate with arrow keys like a pro
 - **smart git handling** → auto-detects if you need to init git
-- **one-click deploy** → commit + push in one go
+- **one-click deploy** → commit + push with progress animations
 - **cross-platform** → works on windows, linux, mac
+- **visual feedback** → colorful progress bars that change from red to green
 
 ## 🛠️ setup
 
@@ -64,12 +65,13 @@ just run it in any project folder:
 you'll see something like:
 ```
 lıı project scanning:
-92.3% Python (12 files)
-7.7% Shell (1 files)
+ 92.3% Python      [████████████████████] (12 files)
+  7.7% Shell       [███░░░░░░░░░░░░░░░░░░] (1 files)
 
 ᯓ➤ deployment menu:
 
 > ᯓ➤ Deploy
+  ⟲ Pull
   ⏣ Init Git  
   ✖ Exit
 
@@ -81,6 +83,10 @@ use ↑↓ to navigate, enter to select
 **ᯓ➤ Deploy** → commits and pushes your changes
 - red if git isn't set up yet
 - green when ready to go
+
+**⟲ Pull** → pulls latest changes from github
+- blue when git is ready
+- red if git not initialized
 
 **⏣ Init Git** → sets up git repo
 - asks for your github url
@@ -112,9 +118,15 @@ detects these file types:
 
 **every other time:**
 1. run `./deploy` 
-2. choose "Deploy"
-3. type commit message
+2. choose "Pull" to get latest changes (optional)
+3. choose "Deploy" → type commit message
 4. done
+
+**when working with others:**
+1. choose "Pull" before making changes
+2. make your changes
+3. choose "Deploy" to push
+4. stay synced no cap
 
 ## 🚀 what's next
 
