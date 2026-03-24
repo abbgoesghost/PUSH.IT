@@ -267,7 +267,7 @@ def deploy():
         success, _ = run_command("git push")
     
     if success:
-        print(f"{Colors.GREEN} [√] deployment successful no cap!{Colors.END}")
+        print(f"{Colors.GREEN} [√] deployment successful!{Colors.END}")
     else:
         print(f"{Colors.RED} [✗] push failed rip{Colors.END}")
 
