@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
 PUSH.IT
-faster than flash
+faster than the flash
 """
 
 import os
