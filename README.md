@@ -13,7 +13,7 @@
 
 ## what's this about?
 
-tired of typing `git add .`, `git commit -m "fix"`, `git push` every single time? yeah me too. 
+tired of typing `git add .`, `git commit -m "fix"`, `git push` every single time? YEAH me too. 
 
 PUSH.IT isa terminal tool that scan your project, shows you what languages youre working with, and lets you deploy with style. no more boring git commands fr.
 
