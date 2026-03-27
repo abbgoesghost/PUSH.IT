@@ -121,7 +121,7 @@ def show_progress_bar(message, duration=2):
         percentage = (i / bar_length) * 100
         filled_length = i
         
-        #---bar color based on progress---#
+        #---bar color based on progressing---#
         if percentage >= 80:
             bar_color = Colors.GREEN
         elif percentage >= 40:
@@ -142,7 +142,7 @@ def is_git_initialized():
     return os.path.exists('.git')
 
 def run_command(command, capture_output=False):
-    """run shell command"""
+    """run shell commands"""
     try:
         if capture_output:
             result = subprocess.run(command, shell=True, capture_output=True, text=True)
